@@ -22,6 +22,16 @@ async function initGreeter() {
     console.log(msg, type);
   } );
 
+  // Connect fingerprint signal if available
+  if (typeof lightdm.fingerprint !== "undefined" && lightdm.fingerprint?.connect) {
+    lightdm.fingerprint.connect(() => {
+      console.log("Fingerprint signal received from LightDM");
+      if (typeof authenticate !== "undefined" && authenticate.startFingerprintAuthentication) {
+        authenticate.startFingerprintAuthentication();
+      }
+    });
+  }
+
   // Instantiate image profile
   userProfile = new UserProfile();
 

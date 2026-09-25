@@ -1,7 +1,7 @@
 class KeyEvents {
 	constructor () {
 		this._keysLog = {};
-		this._passwordInput = document.querySelector('#input-password');
+		this._passwordInput = document.querySelector("#input-password");
 		this._modifierKey = null;
 		this._sessionsKey = null;
 		this._powerKey = null;
@@ -30,7 +30,7 @@ class KeyEvents {
 
 	_onKeyDownEvent() {
 		document.addEventListener(
-			'keydown',
+			"keydown",
 			e => {
 				this._keysLog[e.key] = true;
 			}
@@ -39,7 +39,7 @@ class KeyEvents {
 
 	_onKeyUpEvent() {
 		document.addEventListener(
-			'keyup',
+			"keyup",
 			e => {
 				// Toggle sidebar
 				if ((this._keysLog[this._modifierKey]) && (e.key === this._sidebarKey)) {
@@ -66,9 +66,30 @@ class KeyEvents {
 					return;
 				}
 
-				if ((e.key === ' ') || (e.code === 'Space') || (e.code === 'NumpadEnter')) {
+				if ((e.key === " ") || (e.code === "Space") || (e.code === "NumpadEnter")) {
 					if (greeterScreen.getGreeterVisibility()) {
 						greeterScreen.toggleGreeter();
+						return;
+					}
+				}
+
+				// Enter key - show greeter if not already visible and not in settings/sidebar
+				if (e.key === "Enter") {
+					// Don't trigger Enter if we're in the password input (it will be handled there)
+					if (document.activeElement === this._passwordInput) {
+						delete this._keysLog[e.key];
+						return;
+					}
+
+					// Don't trigger if sidebar or settings are open
+					if (sidebar.getSidebarVisibility()) {
+						delete this._keysLog[e.key];
+						return;
+					}
+
+					if (!greeterScreen.getGreeterVisibility()) {
+						e.preventDefault();
+						greeterScreen._showGreeter();
 						return;
 					}
 				}
@@ -92,7 +113,7 @@ class KeyEvents {
 					}
 
 					greeterScreen.toggleGreeter();
-					this._passwordInput.value = '';
+					this._passwordInput.value = "";
 					return;
 				}
 				delete this._keysLog[e.key];

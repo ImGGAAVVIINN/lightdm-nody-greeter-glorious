@@ -1,20 +1,20 @@
-
 class Authenticate {
 	constructor() {
-		this._passwordBox = document.querySelector('#input-password-box');
-		this._passwordInput = document.querySelector('#input-password');
-		this._buttonAuthenticate = document.querySelector('#button-authenticate');
-		this._passwordInputContainer = document.querySelector('#input-password-container');
-		this._tooltipPassword = document.querySelector('#tooltip-password');
-		this._password = '';
-		
+		this._passwordBox = document.querySelector("#input-password-box");
+		this._passwordInput = document.querySelector("#input-password");
+		this._buttonAuthenticate = document.querySelector("#button-authenticate");
+		this._passwordInputContainer = document.querySelector("#input-password-container");
+		this._tooltipPassword = document.querySelector("#tooltip-password");
+		this._password = "";
+		this._fingerprintSupported = typeof lightdm.fingerprint !== "undefined";
+
 		this._init();
-		this._language = new Language;		
+		this._language = new Language;
 	}
 
 	_returnRandomErrorMessages() {
 		const errorMessages = this._language._getErrorMessages();
-		return errorMessages[Math.floor(Math.random() * errorMessages.length)];	
+		return errorMessages[Math.floor(Math.random() * errorMessages.length)];
 	}
 
 	_returnRandomSuccessfulMessages() {
@@ -26,6 +26,18 @@ class Authenticate {
 	startAuthentication() {
 		lightdm.cancel_authentication();
 		lightdm.authenticate(String(accounts.getDefaultUserName()));
+	}
+
+	// Start fingerprint authentication
+	startFingerprintAuthentication() {
+		console.log("Fingerprint authentication started");
+		this.startAuthentication();
+		// Simulate fingerprint match - respond with empty string as fingerprint does not need a password
+		setTimeout(() => {
+			if (lightdm.in_authentication) {
+				lightdm.respond("");
+			}
+		}, 300);
 	}
 
 	// Timer expired, create new authentication session
@@ -53,36 +65,37 @@ class Authenticate {
 		// Make password input read-only
 		this._passwordInput.readOnly = true;
 		this._passwordInput.blur();
-		
-		// Success messages
-		this._passwordBox.classList.add('authentication-success');
-		this._tooltipPassword.innerText = this._returnRandomSuccessfulMessages();
-		this._tooltipPassword.classList.add('tooltip-success');
 
+		// Success messages
+		this._passwordBox.classList.add("authentication-success");
+		this._tooltipPassword.innerText = this._returnRandomSuccessfulMessages();
+		this._tooltipPassword.classList.add("tooltip-success");
+
+		// Immediate login after fade-in (reduced delay)
 		setTimeout(
 			() => {
 				loginFade.showLoginFade();
 			},
-			500
+			300
 		);
 
-		// Add a delay before unlocking
+		// Login immediately after fade (no extra delay)
 		setTimeout(
 			() => {
 				var defSession = String(sessions.getDefaultSession());
 				console.log(defSession);
-				this._buttonAuthenticate.classList.remove('authentication-success');
+				this._buttonAuthenticate.classList.remove("authentication-success");
 				lightdm.start_session(defSession);
-				this._tooltipPassword.classList.remove('tooltip-success');
+				this._tooltipPassword.classList.remove("tooltip-success");
 			},
-			1000
+			800
 		);
 	}
 
 	// Remove authentication failure messages
 	_authFailedRemove() {
-		this._tooltipPassword.classList.remove('tooltip-error');
-		this._passwordBox.classList.remove('authentication-failed');
+		this._tooltipPassword.classList.remove("tooltip-error");
+		this._passwordBox.classList.remove("authentication-failed");
 	}
 
 	// You failed to authenticate
@@ -91,19 +104,19 @@ class Authenticate {
 
 		// New authentication session
 		this.startAuthentication();
-		this._passwordInput.value = '';
+		this._passwordInput.value = "";
 
 		// Error messages/UI
-		this._passwordBox.classList.add('authentication-failed');
+		this._passwordBox.classList.add("authentication-failed");
 		this._tooltipPassword.innerText = this._returnRandomErrorMessages();
-		this._tooltipPassword.classList.add('tooltip-error');
+		this._tooltipPassword.classList.add("tooltip-error");
 
 		// Shake animation
-		this._passwordInputContainer.classList.add('shake');
+		this._passwordInputContainer.classList.add("shake");
 		setTimeout(
 			() => {
 				// Stop shaking
-				this._passwordInputContainer.classList.remove('shake');
+				this._passwordInputContainer.classList.remove("shake");
 			},
 			500
 		);
@@ -112,7 +125,7 @@ class Authenticate {
 	// Register keyup event
 	_buttonAuthenticateClickEvent() {
 		this._buttonAuthenticate.addEventListener(
-			'click',
+			"click",
 			() => {
 				//console.log(lightdm.in_authentication);
 				//console.log("Auth: " + lightdm.is_authenticated);
@@ -126,15 +139,29 @@ class Authenticate {
 	// Register keydown event
 	_passwordInputKeyDownEvent() {
 		this._passwordInput.addEventListener(
-			'keydown',
+			"keydown",
 			e => {
 				this._authFailedRemove();
 				this._password = this._passwordInput.value;
-				if (e.key === 'Enter') {
+				if (e.key === "Enter") {
 					lightdm.respond(String(this._password));
 				}
 			}
 		);
+	}
+
+	// Register fingerprint signal if supported
+	_registerFingerprintSignal() {
+		if (this._fingerprintSupported) {
+			console.log("Fingerprint authentication is supported");
+			// Listen for fingerprint signal from LightDM
+			if (typeof lightdm.fingerprint !== "undefined" && lightdm.fingerprint.connect) {
+				lightdm.fingerprint.connect(() => {
+					console.log("Fingerprint detected!");
+					this.startFingerprintAuthentication();
+				});
+			}
+		}
 	}
 
 	_init() {
@@ -142,13 +169,14 @@ class Authenticate {
 		this._authenticationComplete();
 		this._buttonAuthenticateClickEvent();
 		this._passwordInputKeyDownEvent();
+		this._registerFingerprintSignal();
 		if (!lightdm) {
 			lightdm.onload = function() {
-				console.log('Start authentication');
+				console.log("Start authentication");
 				this.startAuthentication();
 			};
 		} else {
-			console.log('Start authentication');
+			console.log("Start authentication");
 			this.startAuthentication();
 		}
 	}
