@@ -334,5 +334,55 @@
 			Oof! Does your browser support JavaScript? If you think so, enable it!
 		</strong>
 	</noscript>
+	<!-- TEMPORARY DIAGNOSTIC PANEL - RAW LIGHTDM AUTH EVENTS -->
+	<!-- Hidden by default. Toggle with F12 or Ctrl+Shift+I -->
+	<div id="lightdm-diagnostic-panel" style="position:fixed;top:0;right:0;width:400px;height:300px;background:rgba(0,0,0,0.9);color:#0f0;font-family:monospace;font-size:11px;padding:10px;overflow-y:auto;z-index:99999;border:2px solid #0f0;display:none;">
+		<div style="font-weight:bold;color:#fff;margin-bottom:5px;cursor:pointer;" id="diag-header">=== RAW LIGHTDM AUTH DIAGNOSTIC ===</div>
+		<div id="lightdm-diagnostic-log"></div>
+	</div>
+	<script>
+	window._lightdmDiagnosticEvents = [];
+	window._lightdmDiagnosticVisible = false;
+
+	function _logLightdmEvent(event, data) {
+		var log = document.getElementById('lightdm-diagnostic-log');
+		if (!log) return;
+		var entry = document.createElement('div');
+		entry.style.borderBottom = '1px solid #333';
+		entry.style.padding = '3px 0';
+		entry.style.wordBreak = 'break-all';
+		var timestamp = new Date().toLocaleTimeString();
+		var html = '<div style="color:#ff0;">[' + timestamp + '] ' + event + ':</div>';
+		if (data) {
+			for (var key in data) {
+				html += '<div style="padding-left:10px;color:#0f0;">' + key + ': ' + JSON.stringify(data[key]) + '</div>';
+			}
+		}
+		entry.innerHTML = html;
+		log.appendChild(entry);
+		log.scrollTop = log.scrollHeight;
+		window._lightdmDiagnosticEvents.push({event: event, data: data, time: timestamp});
+	}
+
+	function _toggleDiagnostic() {
+		var panel = document.getElementById('lightdm-diagnostic-panel');
+		if (!panel) return;
+		if (panel.style.display === 'none') {
+			panel.style.display = 'block';
+			window._lightdmDiagnosticVisible = true;
+		} else {
+			panel.style.display = 'none';
+			window._lightdmDiagnosticVisible = false;
+		}
+	}
+
+	// F12 or Ctrl+Shift+I toggles the diagnostic panel
+	document.addEventListener('keydown', function(e) {
+		if (e.key === 'F12' || (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'i'))) {
+			e.preventDefault();
+			_toggleDiagnostic();
+		}
+	});
+	</script>
 </body>
 </html>
